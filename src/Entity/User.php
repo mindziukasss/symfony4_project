@@ -8,38 +8,48 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Core\Validator\Constraints\UserPassword;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use App\Controller\ResetPasswordAction;
 
 /**
  * @ApiResource(
  *     itemOperations={
- *     "get" ={
- *          "access_control"="is_granted('IS_AUTHENTICATED_FULLY')",
- *          "normalization_context"={
- *             "groups"={"get"}
- *              }
- *          },
- *     "put" ={
- *          "access_control"="is_granted('IS_AUTHENTICATED_FULLY') and object == user",
- *         "denormalization_context"={
- *         "groups"={"put"}
- *              },
- *              "normalization_context"={
- *                  "groups"={"get"}
- *               }
- *          }
- *      },
+ *         "get"={
+ *             "access_control"="is_granted('IS_AUTHENTICATED_FULLY')",
+ *             "normalization_context"={
+ *                 "groups"={"get"}
+ *             }
+ *         },
+ *         "put"={
+ *             "access_control"="is_granted('IS_AUTHENTICATED_FULLY') and object == user",
+ *             "denormalization_context"={
+ *                 "groups"={"put"}
+ *             },
+ *             "normalization_context"={
+ *                 "groups"={"get"}
+ *             }
+ *         },
+ *         "put-reset-password"={
+ *             "access_control"="is_granted('IS_AUTHENTICATED_FULLY') and object == user",
+ *             "method"="PUT",
+ *             "path"="/users/{id}/reset-password",
+ *             "controller"=ResetPasswordAction::class,
+ *             "denormalization_context"={
+ *                 "groups"={"put-reset-password"}
+ *             }
+ *         }
+ *     },
  *     collectionOperations={
- *     "post"={
- *          "denormalization_context"={
- *              "groups"={"post"}
- *          },
- *          "normalization_context"={
- *                  "groups"={"get"}
- *            }
- *        }
- *
+ *         "post"={
+ *             "denormalization_context"={
+ *                 "groups"={"post"}
+ *             },
+ *             "normalization_context"={
+ *                 "groups"={"get"}
+ *             }
+ *         }
  *     },
  * )
  * @ORM\Entity(repositoryClass="App\Repository\UserRepository")
@@ -67,42 +77,65 @@ class User implements UserInterface
     /**
      * @ORM\Column(type="string", length=255)
      * @Groups({"get", "post", "put", "get-comment-with-author", "get-blog-post-with-author"})
-     * @Assert\NotBlank()
-     * @Assert\Length(min=6 , max=40)
+     * @Assert\NotBlank(groups={"post", "put"})
+     * @Assert\Length(min=6 , max=40, groups={"post", "put"})
      */
     private $name;
 
     /**
      * @ORM\Column(type="string", length=255)
-     * @Groups({"put", "post"})
-     * @Assert\NotBlank()
+     * @Groups({"post"})
+     * @Assert\NotBlank(groups={"post"})
      */
     private $password;
 
     /**
      * @ORM\Column(type="string", length=255)
      * @Groups({"get", "post", "get-comment-with-author", "get-blog-post-with-author"})
-     * @Assert\NotBlank()
-     * @Assert\Length(min=6 , max="40")
+     * @Assert\NotBlank(groups={"post"})
+     * @Assert\Length(min=6 , max="40", groups={"post"})
      *
      */
     private $username;
 
     /**
-     * @Groups({"put", "post"})
-     * @Assert\NotBlank()
+     * @Groups({"post"})
+     * @Assert\NotBlank(groups={"post"})
      * @Assert\Expression(
      *     "this.getPassword() === this.getRetypedPassword()",
-     *     message="Password does not match"
+     *     message="Password does not match",
+     *     groups={"post"}
      * )
      */
     private $retypedPassword;
 
     /**
+     * @Groups({"put-reset-password"})
+     * @Assert\NotBlank()
+     */
+    private $newPassword;
+    /**
+     * @Groups({"put-reset-password"})
+     * @Assert\NotBlank()
+     * @Assert\Expression(
+     *     "this.getNewPassword() === this.getNewRetypedPassword()",
+     *     message="Passwords does not match"
+     * )
+     */
+    private $newRetypedPassword;
+    /**
+     * @Groups({"put-reset-password"})
+     * @Assert\NotBlank()
+     * @UserPassword()
+     */
+    private $oldPassword;
+
+    /**
      * @ORM\Column(type="string", length=255)
      * @Groups({"post", "put", "get-admin", "get-owner"})
-     * @Assert\NotBlank()
-     * @Assert\Email()
+     * @Assert\NotBlank(groups={"post"})
+     * @Assert\Email(groups={"post", "put"})
+     * @Assert\Length(min=6, max=255, groups={"post", "put"})
      */
     private $email;
 
@@ -124,6 +157,11 @@ class User implements UserInterface
      *
      */
     private $roles;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $passwordChangeDate;
 
     public function __construct()
     {
@@ -256,5 +294,46 @@ class User implements UserInterface
     public function setRetypedPassword($retypedPassword): void
     {
         $this->retypedPassword = $retypedPassword;
+    }
+
+    public function getNewPassword(): ?string
+    {
+        return $this->newPassword;
+    }
+    public function setNewPassword($newPassword): void
+    {
+        $this->newPassword = $newPassword;
+    }
+    public function getNewRetypedPassword(): ?string
+    {
+        return $this->newRetypedPassword;
+    }
+    public function setNewRetypedPassword($newRetypedPassword): void
+    {
+        $this->newRetypedPassword = $newRetypedPassword;
+    }
+    public function getOldPassword(): ?string
+    {
+        return $this->oldPassword;
+    }
+    public function setOldPassword($oldPassword): void
+    {
+        $this->oldPassword = $oldPassword;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getPasswordChangeDate()
+    {
+        return $this->passwordChangeDate;
+    }
+
+    /**
+     * @param mixed $passwordChangeDate
+     */
+    public function setPasswordChangeDate($passwordChangeDate): void
+    {
+        $this->passwordChangeDate = $passwordChangeDate;
     }
 }
