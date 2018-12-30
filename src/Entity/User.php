@@ -58,11 +58,11 @@ use App\Controller\ResetPasswordAction;
  */
 class User implements UserInterface
 {
-    const ROLE_COMMENTATOR = "ROLE_COMMENTATOR";
-    const ROLE_WRITER = "ROLE_WRITER";
-    const ROLE_EDITOR = "ROLE_EDITOR";
-    const ROLE_ADMIN = "ROLE_ADMIN";
-    const ROLE_SUPERADMIN = "ROLE_SUPERADMIN";
+    const ROLE_COMMENTATOR = 'ROLE_COMMENTATOR';
+    const ROLE_WRITER = 'ROLE_WRITER';
+    const ROLE_EDITOR = 'ROLE_EDITOR';
+    const ROLE_ADMIN = 'ROLE_ADMIN';
+    const ROLE_SUPERADMIN = 'ROLE_SUPERADMIN';
 
     const DEFAULT_ROLES = [self::ROLE_COMMENTATOR];
 
@@ -76,11 +76,11 @@ class User implements UserInterface
 
     /**
      * @ORM\Column(type="string", length=255)
-     * @Groups({"get", "post", "put", "get-comment-with-author", "get-blog-post-with-author"})
-     * @Assert\NotBlank(groups={"post", "put"})
-     * @Assert\Length(min=6 , max=40, groups={"post", "put"})
+     * @Groups({"get", "post", "get-comment-with-author", "get-blog-post-with-author"})
+     * @Assert\NotBlank(groups={"post"})
+     * @Assert\Length(min=6, max=255, groups={"post"})
      */
-    private $name;
+    private $username;
 
     /**
      * @ORM\Column(type="string", length=255)
@@ -90,20 +90,11 @@ class User implements UserInterface
     private $password;
 
     /**
-     * @ORM\Column(type="string", length=255)
-     * @Groups({"get", "post", "get-comment-with-author", "get-blog-post-with-author"})
-     * @Assert\NotBlank(groups={"post"})
-     * @Assert\Length(min=6 , max="40", groups={"post"})
-     *
-     */
-    private $username;
-
-    /**
      * @Groups({"post"})
      * @Assert\NotBlank(groups={"post"})
      * @Assert\Expression(
      *     "this.getPassword() === this.getRetypedPassword()",
-     *     message="Password does not match",
+     *     message="Passwords does not match",
      *     groups={"post"}
      * )
      */
@@ -111,24 +102,35 @@ class User implements UserInterface
 
     /**
      * @Groups({"put-reset-password"})
-     * @Assert\NotBlank()
+     * @Assert\NotBlank(groups={"put-reset-password"})
      */
     private $newPassword;
+
     /**
      * @Groups({"put-reset-password"})
-     * @Assert\NotBlank()
+     * @Assert\NotBlank(groups={"put-reset-password"})
      * @Assert\Expression(
      *     "this.getNewPassword() === this.getNewRetypedPassword()",
-     *     message="Passwords does not match"
+     *     message="Passwords does not match",
+     *     groups={"put-reset-password"}
      * )
      */
     private $newRetypedPassword;
+
     /**
      * @Groups({"put-reset-password"})
-     * @Assert\NotBlank()
-     * @UserPassword()
+     * @Assert\NotBlank(groups={"put-reset-password"})
+     * @UserPassword(groups={"put-reset-password"})
      */
     private $oldPassword;
+
+    /**
+     * @ORM\Column(type="string", length=255)
+     * @Groups({"get", "post", "put", "get-comment-with-author", "get-blog-post-with-author"})
+     * @Assert\NotBlank(groups={"post"})
+     * @Assert\Length(min=5, max=255, groups={"post", "put"})
+     */
+    private $name;
 
     /**
      * @ORM\Column(type="string", length=255)
@@ -140,13 +142,13 @@ class User implements UserInterface
     private $email;
 
     /**
-     * @ORM\OneToMany(targetEntity="App\Entity\BlogPost" , mappedBy="author")
+     * @ORM\OneToMany(targetEntity="App\Entity\BlogPost", mappedBy="author")
      * @Groups({"get"})
      */
     private $posts;
 
     /**
-     * @ORM\OneToMany(targetEntity="App\Entity\Comment" , mappedBy="author")
+     * @ORM\OneToMany(targetEntity="App\Entity\Comment", mappedBy="author")
      * @Groups({"get"})
      */
     private $comments;
@@ -154,7 +156,6 @@ class User implements UserInterface
     /**
      * @ORM\Column(type="simple_array", length=200)
      * @Groups({"get-admin", "get-owner"})
-     *
      */
     private $roles;
 
@@ -182,19 +183,19 @@ class User implements UserInterface
         $this->confirmationToken = null;
     }
 
-    public function getId(): ?int
+    public function getId()
     {
         return $this->id;
     }
 
-    public function getName(): ?string
+    public function getUsername(): ?string
     {
-        return $this->name;
+        return $this->username;
     }
 
-    public function setName(string $name): self
+    public function setUsername(string $username): self
     {
-        $this->name = $name;
+        $this->username = $username;
 
         return $this;
     }
@@ -211,14 +212,14 @@ class User implements UserInterface
         return $this;
     }
 
-    public function getUsername(): ?string
+    public function getName(): ?string
     {
-        return $this->username;
+        return $this->name;
     }
 
-    public function setUsername(string $username): self
+    public function setName(string $name): self
     {
-        $this->username = $username;
+        $this->name = $name;
 
         return $this;
     }
@@ -251,58 +252,31 @@ class User implements UserInterface
         return $this->comments;
     }
 
-    /**
-     * @return array
-     */
     public function getRoles(): array
     {
         return $this->roles;
     }
 
-    /**
-     * @param array $roles
-     *
-     * @return array
-     */
     public function setRoles(array $roles)
     {
-        return $this->roles = $roles;
+        $this->roles = $roles;
     }
 
-    /**
-     * Returns the salt that was originally used to encode the password.
-     *
-     * This can return null if the password was not encoded using a salt.
-     *
-     * @return string|null The salt
-     */
     public function getSalt()
     {
         return null;
     }
 
-    /**
-     * Removes sensitive data from the user.
-     *
-     * This is important if, at any given point, sensitive information like
-     * the plain-text password is stored on this object.
-     */
     public function eraseCredentials()
     {
-        // TODO: Implement eraseCredentials() method.
+
     }
 
-    /**
-     * @return mixed
-     */
     public function getRetypedPassword()
     {
         return $this->retypedPassword;
     }
 
-    /**
-     * @param mixed $retypedPassword
-     */
     public function setRetypedPassword($retypedPassword): void
     {
         $this->retypedPassword = $retypedPassword;
@@ -312,70 +286,57 @@ class User implements UserInterface
     {
         return $this->newPassword;
     }
+
     public function setNewPassword($newPassword): void
     {
         $this->newPassword = $newPassword;
     }
+
     public function getNewRetypedPassword(): ?string
     {
         return $this->newRetypedPassword;
     }
+
     public function setNewRetypedPassword($newRetypedPassword): void
     {
         $this->newRetypedPassword = $newRetypedPassword;
     }
+
     public function getOldPassword(): ?string
     {
         return $this->oldPassword;
     }
+
     public function setOldPassword($oldPassword): void
     {
         $this->oldPassword = $oldPassword;
     }
 
-    /**
-     * @return mixed
-     */
     public function getPasswordChangeDate()
     {
         return $this->passwordChangeDate;
     }
 
-    /**
-     * @param mixed $passwordChangeDate
-     */
     public function setPasswordChangeDate($passwordChangeDate): void
     {
         $this->passwordChangeDate = $passwordChangeDate;
     }
 
-    /**
-     * @return mixed
-     */
     public function getEnabled()
     {
         return $this->enabled;
     }
 
-    /**
-     * @param mixed $enabled
-     */
     public function setEnabled($enabled): void
     {
         $this->enabled = $enabled;
     }
 
-    /**
-     * @return mixed
-     */
     public function getConfirmationToken()
     {
         return $this->confirmationToken;
     }
 
-    /**
-     * @param mixed $confirmationToken
-     */
     public function setConfirmationToken($confirmationToken): void
     {
         $this->confirmationToken = $confirmationToken;
