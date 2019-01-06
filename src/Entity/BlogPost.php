@@ -90,9 +90,18 @@ class BlogPost implements AuthoredEntityInterface, PublishedDateEntityInterface
      */
     private $slug;
 
+    /**
+     * @ORM\ManyToMany(targetEntity="App\Entity\Image")
+     * @ORM\JoinTable()
+     * @ApiSubresource()
+     * @Groups({"post"})
+     */
+    private $images;
+
     public function __construct()
     {
         $this->comments = new ArrayCollection();
+        $this->images = new ArrayCollection();
 
     }
 
@@ -181,6 +190,19 @@ class BlogPost implements AuthoredEntityInterface, PublishedDateEntityInterface
     public function getComments(): Collection
     {
         return $this->comments;
+    }
+
+    public function getImages(): Collection
+    {
+        return $this->images;
+    }
+    public function addImage(Image $image)
+    {
+        $this->images->add($image);
+    }
+    public function removeImage(Image $image)
+    {
+        $this->images->removeElement($image);
     }
 
 }
