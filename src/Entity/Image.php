@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 use Vich\UploaderBundle\Mapping\Annotation as Vich;
 use App\Controller\UploadImageAction;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 /**
  * @ORM\Entity()
@@ -40,6 +41,7 @@ class Image
 
     /**
      * @ORM\Column(nullable=true)
+     * @Groups({"get-blog-post-with-author"})
      */
     private $url;
 
